@@ -1,0 +1,24 @@
+{
+	"title": "Example Server Actor input",
+	"description": "Same fields as the POST / request body. A normal run pushes the input to the default dataset as one item.",
+	"type": "object",
+	"schemaVersion": 1,
+	"properties": {
+		"message": {
+			"title": "Message",
+			"type": "string",
+			"description": "Text to echo.",
+			"editor": "textfield",
+			"prefill": "hello"
+		},
+		"count": {
+			"title": "Count",
+			"type": "integer",
+			"description": "Number to echo.",
+			"default": 1,
+			"prefill": 1,
+			"minimum": 0
+		}
+	},
+	"required": ["message"]
+}

@@ -1,0 +1,17 @@
+{
+	"$schema": "https://apify.com/schemas/v1/actor.ide.json",
+	"actorSpecification": 1,
+	"name": "example-server-actor",
+	"title": "Apify example Server Actor",
+	"description": "Actor used for MCP server testing. In standby it serves an HTTP API documented by an OpenAPI schema; a normal run pushes its input to the default dataset.",
+	"version": "0.0",
+	"buildTag": "latest",
+	"usesStandbyMode": true,
+	"meta": {
+		"templateId": "ts-standby",
+		"generatedBy": "Claude Code"
+	},
+	"dockerfile": "../Dockerfile",
+	"inputSchema": "./input_schema.json",
+	"webServerSchema": "./openapi.json"
+}

@@ -1,0 +1,219 @@
+{
+	"openapi": "3.0.0",
+	"info": {
+		"title": "Example Server Actor API",
+		"description": "Test API for the Apify MCP server. Echoes requests and returns fixed status codes, content types, sizes, delays and redirects.",
+		"version": "0.0"
+	},
+	"servers": [
+		{
+			"url": "https://example-server-actor.apify.actor",
+			"description": "Example Server Actor server URL"
+		}
+	],
+	"paths": {
+		"/": {
+			"get": {
+				"summary": "Echo a GET request",
+				"description": "Returns the method, path, query, headers and body of the request as JSON. Also answers the readiness probe when the `x-apify-container-server-readiness-probe` header is set.",
+				"responses": {
+					"200": { "$ref": "#/components/responses/Echo" }
+				}
+			},
+			"post": {
+				"summary": "Echo a POST request",
+				"description": "Returns the method, path, query, headers and parsed JSON body of the request as JSON.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": { "$ref": "#/components/schemas/EchoRequest" },
+							"example": { "message": "hello", "count": 1 }
+						}
+					}
+				},
+				"responses": {
+					"200": { "$ref": "#/components/responses/Echo" },
+					"400": { "$ref": "#/components/responses/Error" }
+				}
+			}
+		},
+		"/status/{code}": {
+			"get": {
+				"summary": "Return an error status",
+				"description": "Returns the given status code with a JSON error body.",
+				"parameters": [
+					{
+						"name": "code",
+						"in": "path",
+						"required": true,
+						"description": "HTTP status code to return, from 400 to 599.",
+						"schema": { "type": "integer", "minimum": 400, "maximum": 599 },
+						"example": 404
+					}
+				],
+				"responses": {
+					"default": { "$ref": "#/components/responses/Error" }
+				}
+			}
+		},
+		"/empty": {
+			"get": {
+				"summary": "Return no content",
+				"description": "Returns 204 with no body and no Content-Type.",
+				"responses": {
+					"204": { "description": "No content." }
+				}
+			}
+		},
+		"/text": {
+			"get": {
+				"summary": "Return plain text",
+				"description": "Returns a short `text/plain` body.",
+				"responses": {
+					"200": {
+						"description": "Plain text.",
+						"content": { "text/plain": { "schema": { "type": "string" } } }
+					}
+				}
+			}
+		},
+		"/binary": {
+			"get": {
+				"summary": "Return binary data",
+				"description": "Returns 256 bytes as `application/octet-stream`.",
+				"responses": {
+					"200": {
+						"description": "Binary data.",
+						"content": {
+							"application/octet-stream": { "schema": { "type": "string", "format": "binary" } }
+						}
+					}
+				}
+			}
+		},
+		"/bytes": {
+			"get": {
+				"summary": "Return n bytes",
+				"description": "Returns a `text/plain` body of exactly `n` bytes.",
+				"parameters": [{ "$ref": "#/components/parameters/ByteCount" }],
+				"responses": {
+					"200": { "$ref": "#/components/responses/Bytes" },
+					"400": { "$ref": "#/components/responses/Error" }
+				}
+			}
+		},
+		"/gzip": {
+			"get": {
+				"summary": "Return n bytes gzip-encoded",
+				"description": "Returns the same body as `/bytes` with `Content-Encoding: gzip`. `n` counts decompressed bytes.",
+				"parameters": [{ "$ref": "#/components/parameters/ByteCount" }],
+				"responses": {
+					"200": { "$ref": "#/components/responses/Bytes" },
+					"400": { "$ref": "#/components/responses/Error" }
+				}
+			}
+		},
+		"/delay": {
+			"get": {
+				"summary": "Respond after a delay",
+				"description": "Waits `ms` milliseconds, then returns JSON.",
+				"parameters": [
+					{
+						"name": "ms",
+						"in": "query",
+						"required": true,
+						"description": "Delay in milliseconds, from 0 to 150000.",
+						"schema": { "type": "integer", "minimum": 0, "maximum": 150000 },
+						"example": 1000
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Delay finished.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": { "delayedMs": { "type": "integer" } },
+									"required": ["delayedMs"]
+								}
+							}
+						}
+					},
+					"400": { "$ref": "#/components/responses/Error" }
+				}
+			}
+		},
+		"/redirect": {
+			"get": {
+				"summary": "Redirect to /",
+				"description": "Returns 302 with `Location: /`.",
+				"responses": {
+					"302": {
+						"description": "Redirect.",
+						"headers": {
+							"Location": { "description": "Always `/`.", "schema": { "type": "string" } }
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"EchoRequest": {
+				"type": "object",
+				"description": "Same fields as the Actor input schema.",
+				"properties": {
+					"message": { "type": "string", "description": "Text to echo." },
+					"count": { "type": "integer", "minimum": 0, "default": 1, "description": "Number to echo." }
+				},
+				"required": ["message"]
+			},
+			"EchoResponse": {
+				"type": "object",
+				"properties": {
+					"method": { "type": "string", "example": "POST" },
+					"path": { "type": "string", "example": "/" },
+					"query": { "type": "object", "additionalProperties": { "type": "string" } },
+					"headers": { "type": "object", "additionalProperties": true },
+					"body": { "description": "Parsed JSON body, raw text body, or null when empty." }
+				},
+				"required": ["method", "path", "query", "headers", "body"]
+			},
+			"ErrorResponse": {
+				"type": "object",
+				"properties": {
+					"code": { "type": "integer", "example": 404 },
+					"error": { "type": "string", "example": "Not Found" }
+				},
+				"required": ["code", "error"]
+			}
+		},
+		"parameters": {
+			"ByteCount": {
+				"name": "n",
+				"in": "query",
+				"required": true,
+				"description": "Body size in bytes, from 0 to 1048576.",
+				"schema": { "type": "integer", "minimum": 0, "maximum": 1048576 },
+				"example": 262144
+			}
+		},
+		"responses": {
+			"Echo": {
+				"description": "The request as JSON.",
+				"content": { "application/json": { "schema": { "$ref": "#/components/schemas/EchoResponse" } } }
+			},
+			"Bytes": {
+				"description": "Exactly `n` bytes of `a`.",
+				"content": { "text/plain": { "schema": { "type": "string" } } }
+			},
+			"Error": {
+				"description": "Error.",
+				"content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+			}
+		}
+	}
+}
