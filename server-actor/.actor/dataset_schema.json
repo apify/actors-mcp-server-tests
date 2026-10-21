@@ -1,0 +1,43 @@
+{
+    "actorSpecification": 1,
+    "fields": {
+        "type": "object",
+        "properties": {
+            "firstNumber": {
+                "type": "integer",
+                "title": "First number",
+                "description": "First number to add.",
+                "example": 2
+            },
+            "secondNumber": {
+                "type": "integer",
+                "title": "Second number",
+                "description": "Second number to add.",
+                "example": 3
+            },
+            "sum": {
+                "type": "integer",
+                "title": "Sum",
+                "description": "Sum of firstNumber and secondNumber.",
+                "example": 5
+            }
+        },
+        "required": ["firstNumber", "secondNumber", "sum"]
+    },
+    "views": {
+        "overview": {
+            "title": "Addition results",
+            "transformation": {
+                "fields": ["firstNumber", "secondNumber", "sum"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "firstNumber": { "label": "First number", "format": "number" },
+                    "secondNumber": { "label": "Second number", "format": "number" },
+                    "sum": { "label": "Sum", "format": "number" }
+                }
+            }
+        }
+    }
+}
