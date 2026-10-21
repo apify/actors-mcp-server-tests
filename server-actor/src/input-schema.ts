@@ -1,9 +1,9 @@
 import * as z from 'zod';
 
-// Same fields as the `TaskRequest` body in `.actor/openapi.json`.
+// Same fields as the `AddRequest` body in `.actor/openapi.json`.
 export const inputSchema = z.object({
-    task: z.string().min(1).describe('What the agent is trying to do'),
-    maxTools: z.number().int().min(1).max(8).default(3).describe('Maximum number of tools to recommend'),
+    firstNumber: z.number().int().describe('First number to add'),
+    secondNumber: z.number().int().describe('Second number to add'),
 });
 
 export type Input = z.infer<typeof inputSchema>;

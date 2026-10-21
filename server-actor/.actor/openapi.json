@@ -1,17 +1,113 @@
 {
 	"openapi": "3.0.0",
 	"info": {
-		"title": "Agent Toolbox API",
-		"description": "An agent is only as good as its tools. Browse the toolbox, get tools recommended for a task, or use the test endpoints that echo requests and return fixed status codes, content types, sizes, delays and a redirect.",
+		"title": "Apify MCP server test Server Actor API",
+		"description": "Test API for the Apify MCP server. Not for production use. Adds two numbers, and has test endpoints that echo requests and return fixed status codes, content types, sizes, delays and a redirect.",
 		"version": "0.0"
 	},
 	"servers": [
 		{
 			"url": "https://example-server-actor.apify.actor",
-			"description": "Agent Toolbox server URL"
+			"description": "Test Server Actor URL"
 		}
 	],
 	"paths": {
+		"/add": {
+			"get": {
+				"summary": "Add two numbers (query)",
+				"description": "Adds `firstNumber` and `secondNumber` from the query. Returns the same item a normal run pushes to its dataset.",
+				"parameters": [
+					{
+						"name": "firstNumber",
+						"in": "query",
+						"required": true,
+						"description": "First number to add.",
+						"schema": {
+							"type": "integer"
+						},
+						"example": 2
+					},
+					{
+						"name": "secondNumber",
+						"in": "query",
+						"required": true,
+						"description": "Second number to add.",
+						"schema": {
+							"type": "integer"
+						},
+						"example": 3
+					},
+					{
+						"$ref": "#/components/parameters/AsText"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The sum, as JSON or as `text/plain` when `asText=true`.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AddResponse"
+								}
+							},
+							"text/plain": {
+								"schema": {
+									"type": "string"
+								},
+								"example": "2 + 3 = 5\n"
+							}
+						}
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			},
+			"post": {
+				"summary": "Add two numbers (JSON body)",
+				"description": "Adds `firstNumber` and `secondNumber` from the JSON body. Returns the same item a normal run pushes to its dataset.",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/AsText"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AddRequest"
+							},
+							"example": {
+								"firstNumber": 2,
+								"secondNumber": 3
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The sum, as JSON or as `text/plain` when `asText=true`.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AddResponse"
+								}
+							},
+							"text/plain": {
+								"schema": {
+									"type": "string"
+								},
+								"example": "2 + 3 = 5\n"
+							}
+						}
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			}
+		},
 		"/": {
 			"get": {
 				"summary": "Echo a GET request",
@@ -24,17 +120,16 @@
 			},
 			"post": {
 				"summary": "Echo a POST request",
-				"description": "Returns the method, path, query, headers and parsed JSON body of the request as JSON.",
+				"description": "Returns the method, path, query, headers and body of the request as JSON. A JSON body is parsed; other bodies are returned as text.",
 				"requestBody": {
-					"required": true,
+					"required": false,
 					"content": {
 						"application/json": {
 							"schema": {
-								"$ref": "#/components/schemas/TaskRequest"
+								"description": "Any JSON value."
 							},
 							"example": {
-								"task": "Track competitor prices every day",
-								"maxTools": 3
+								"hello": "world"
 							}
 						}
 					}
@@ -42,107 +137,6 @@
 				"responses": {
 					"200": {
 						"$ref": "#/components/responses/Echo"
-					},
-					"400": {
-						"$ref": "#/components/responses/Error"
-					}
-				}
-			}
-		},
-		"/tools": {
-			"get": {
-				"summary": "List the toolbox",
-				"description": "Returns every tool an agent should have, what it does, and what goes wrong without it.",
-				"responses": {
-					"200": {
-						"description": "The toolbox.",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"motto": {
-											"type": "string"
-										},
-										"tools": {
-											"type": "array",
-											"items": {
-												"$ref": "#/components/schemas/Tool"
-											}
-										}
-									},
-									"required": [
-										"motto",
-										"tools"
-									]
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/tools/{toolId}": {
-			"get": {
-				"summary": "Get one tool",
-				"description": "Returns one tool from the toolbox.",
-				"parameters": [
-					{
-						"name": "toolId",
-						"in": "path",
-						"required": true,
-						"description": "Tool ID from `GET /tools`.",
-						"schema": {
-							"type": "string"
-						},
-						"example": "scraper"
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "The tool.",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Tool"
-								}
-							}
-						}
-					},
-					"404": {
-						"$ref": "#/components/responses/Error"
-					}
-				}
-			}
-		},
-		"/recommend": {
-			"post": {
-				"summary": "Recommend tools for a task",
-				"description": "Picks up to `maxTools` tools whose keywords appear in the task, most matches first. Returns the same item a normal run of the Actor pushes to its dataset.",
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/TaskRequest"
-							},
-							"example": {
-								"task": "Track competitor prices every day and save them to a CSV",
-								"maxTools": 3
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Recommended tools.",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Recommendation"
-								}
-							}
-						}
 					},
 					"400": {
 						"$ref": "#/components/responses/Error"
@@ -189,7 +183,7 @@
 		"/text": {
 			"get": {
 				"summary": "Return plain text",
-				"description": "Returns a short `text/plain` note on why agents need tools.",
+				"description": "Returns a short `text/plain` body.",
 				"responses": {
 					"200": {
 						"description": "Plain text.",
@@ -226,7 +220,7 @@
 		"/bytes": {
 			"get": {
 				"summary": "Return n bytes",
-				"description": "Returns a `text/plain` body of exactly `n` bytes: \"Agents need proper tools. \" repeated and cut to length.",
+				"description": "Returns a `text/plain` body of exactly `n` bytes.",
 				"parameters": [
 					{
 						"$ref": "#/components/parameters/ByteCount"
@@ -289,14 +283,10 @@
 									"properties": {
 										"delayedMs": {
 											"type": "integer"
-										},
-										"note": {
-											"type": "string"
 										}
 									},
 									"required": [
-										"delayedMs",
-										"note"
+										"delayedMs"
 									]
 								}
 							}
@@ -330,97 +320,44 @@
 	},
 	"components": {
 		"schemas": {
-			"TaskRequest": {
+			"AddRequest": {
 				"type": "object",
 				"description": "Same fields as the Actor input schema.",
 				"properties": {
-					"task": {
-						"type": "string",
-						"minLength": 1,
-						"description": "What the agent is trying to do, in plain words."
-					},
-					"maxTools": {
+					"firstNumber": {
 						"type": "integer",
-						"minimum": 1,
-						"maximum": 8,
-						"default": 3,
-						"description": "Maximum number of tools to recommend."
+						"description": "First number to add."
+					},
+					"secondNumber": {
+						"type": "integer",
+						"description": "Second number to add."
 					}
 				},
 				"required": [
-					"task"
+					"firstNumber",
+					"secondNumber"
 				]
 			},
-			"Tool": {
+			"AddResponse": {
 				"type": "object",
 				"properties": {
-					"id": {
-						"type": "string",
-						"example": "scraper"
+					"firstNumber": {
+						"type": "integer",
+						"example": 2
 					},
-					"name": {
-						"type": "string",
-						"example": "Scraper"
+					"secondNumber": {
+						"type": "integer",
+						"example": 3
 					},
-					"job": {
-						"type": "string",
-						"example": "Turns a website into rows."
-					},
-					"withoutIt": {
-						"type": "string",
-						"example": "The agent copies tables by hand, one hallucinated cell at a time."
+					"sum": {
+						"type": "integer",
+						"example": 5
 					}
 				},
 				"required": [
-					"id",
-					"name",
-					"job",
-					"withoutIt"
-				]
-			},
-			"Recommendation": {
-				"type": "object",
-				"properties": {
-					"task": {
-						"type": "string"
-					},
-					"maxTools": {
-						"type": "integer"
-					},
-					"tools": {
-						"type": "array",
-						"items": {
-							"allOf": [
-								{
-									"$ref": "#/components/schemas/Tool"
-								},
-								{
-									"type": "object",
-									"properties": {
-										"matched": {
-											"type": "array",
-											"items": {
-												"type": "string"
-											},
-											"description": "Keywords found in the task. Empty when nothing matched and the schemas are returned as a starting point."
-										}
-									},
-									"required": [
-										"matched"
-									]
-								}
-							]
-						}
-					},
-					"motto": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"task",
-					"maxTools",
-					"tools",
-					"motto"
+					"firstNumber",
+					"secondNumber",
+					"sum"
 				]
 			},
 			"EchoResponse": {
@@ -475,6 +412,16 @@
 			}
 		},
 		"parameters": {
+			"AsText": {
+				"name": "asText",
+				"in": "query",
+				"required": false,
+				"description": "`true` returns the sum as `text/plain`, `false` (default) as JSON. Other values, including `1` and `0`, return 400.",
+				"schema": {
+					"type": "boolean",
+					"default": false
+				}
+			},
 			"ByteCount": {
 				"name": "n",
 				"in": "query",
@@ -500,7 +447,7 @@
 				}
 			},
 			"Bytes": {
-				"description": "Exactly `n` bytes of \"Agents need proper tools. \" repeated.",
+				"description": "Exactly `n` bytes of `a`.",
 				"content": {
 					"text/plain": {
 						"schema": {

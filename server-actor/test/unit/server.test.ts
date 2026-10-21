@@ -5,8 +5,7 @@ import { gunzipSync } from 'node:zlib';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createApiServer, FILLER, MAX_BYTES } from '../../src/server.js';
-import { recommend, TOOLS } from '../../src/toolbox.js';
+import { createApiServer, MAX_BYTES } from '../../src/server.js';
 
 const server = createApiServer();
 let baseUrl: string;
@@ -70,72 +69,57 @@ describe('echo', () => {
     });
 });
 
-describe('toolbox', () => {
-    it('lists every tool without keywords', async () => {
-        const json = await (await fetch(`${baseUrl}/tools`)).json();
-        expect(json.tools).toHaveLength(TOOLS.length);
-        expect(json.tools[0]).toEqual({
-            id: 'api-schema',
-            name: 'API schema',
-            job: expect.any(String),
-            withoutIt: expect.any(String),
-        });
+describe('add', () => {
+    const postAdd = async (body: string, query = '') =>
+        fetch(`${baseUrl}/add${query}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+
+    it('adds numbers from a JSON body', async () => {
+        const res = await postAdd(JSON.stringify({ firstNumber: 2, secondNumber: 3 }));
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ firstNumber: 2, secondNumber: 3, sum: 5 });
     });
 
-    it('returns one tool by id', async () => {
-        const res = await fetch(`${baseUrl}/tools/scraper`);
-        expect(await res.json()).toMatchObject({ id: 'scraper', name: 'Scraper' });
+    it('adds numbers from the query', async () => {
+        const res = await fetch(`${baseUrl}/add?firstNumber=-4&secondNumber=10`);
+        expect(await res.json()).toEqual({ firstNumber: -4, secondNumber: 10, sum: 6 });
     });
 
-    it('returns 404 with a JSON error body for an unknown tool', async () => {
-        const res = await fetch(`${baseUrl}/tools/hammer`);
-        expect(res.status).toBe(404);
-        expect(await res.json()).toEqual({ code: 404, error: "No tool with id 'hammer' in the toolbox" });
+    it('returns text/plain when asText=true', async () => {
+        const res = await fetch(`${baseUrl}/add?firstNumber=2&secondNumber=3&asText=true`);
+        expect(res.headers.get('content-type')).toMatch(/^text\/plain/);
+        expect(await res.text()).toBe('2 + 3 = 5\n');
     });
 
-    it('recommends tools for a task over POST /recommend', async () => {
-        const res = await fetch(`${baseUrl}/recommend`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ task: 'Track competitor prices every day and save them to a CSV' }),
-        });
-        const json = await res.json();
-        expect(json).toEqual(
-            recommend({ task: 'Track competitor prices every day and save them to a CSV', maxTools: 3 }),
-        );
-        expect(json.tools.map((t: { id: string }) => t.id)).toEqual(['storage', 'scheduler', 'scraper']);
+    it('returns JSON when asText=false', async () => {
+        const res = await postAdd(JSON.stringify({ firstNumber: 1, secondNumber: 1 }), '?asText=false');
+        expect(await res.json()).toEqual({ firstNumber: 1, secondNumber: 1, sum: 2 });
     });
 
-    it.each(['{}', '{"task":""}', '{"task":"x","maxTools":0}', '{'])('rejects body %s with 400', async (body) => {
-        const res = await fetch(`${baseUrl}/recommend`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body,
-        });
+    it.each(['1', '0', 'yes'])('rejects asText=%s with 400', async (value) => {
+        const res = await fetch(`${baseUrl}/add?firstNumber=1&secondNumber=2&asText=${value}`);
+        expect(res.status).toBe(400);
+        expect(await res.json()).toEqual({ code: 400, error: 'Query parameter asText must be true or false' });
+    });
+
+    it.each(['?firstNumber=1', '?firstNumber=1.5&secondNumber=2', '?firstNumber=a&secondNumber=2'])(
+        'rejects query %s with 400',
+        async (query) => {
+            const res = await fetch(`${baseUrl}/add${query}`);
+            expect(res.status).toBe(400);
+            expect(await res.json()).toMatchObject({ code: 400 });
+        },
+    );
+
+    it.each(['{}', '{"firstNumber":1,"secondNumber":"2"}', '{'])('rejects body %s with 400', async (body) => {
+        const res = await postAdd(body);
         expect(res.status).toBe(400);
         expect(await res.json()).toMatchObject({ code: 400 });
     });
 
-    it('returns 404 for GET /recommend', async () => {
-        const res = await fetch(`${baseUrl}/recommend`);
-        expect(res.status).toBe(404);
-    });
-});
-
-describe('recommend', () => {
-    it('matches keywords at word starts only', () => {
-        // "generate" contains "rate", "rapid" contains "api"; neither starts a word.
-        const { tools } = recommend({ task: 'generate a rapid summary', maxTools: 8 });
-        expect(tools.map((t) => t.id)).toEqual(['api-schema', 'input-schema']);
-        expect(tools.every((t) => t.matched.length === 0)).toBe(true);
-    });
-
-    it('orders by match count and caps at maxTools', () => {
-        const { tools } = recommend({ task: 'Scrape product data from a web page', maxTools: 2 });
-        expect(tools.map((t) => [t.id, t.matched])).toEqual([
-            ['scraper', ['scrap', 'product', 'data']],
-            ['web-browser', ['web', 'page']],
-        ]);
+    it('rejects other methods with 405', async () => {
+        const res = await fetch(`${baseUrl}/add`, { method: 'PUT' });
+        expect(res.status).toBe(405);
+        expect(res.headers.get('allow')).toBe('GET, POST');
     });
 });
 
@@ -177,7 +161,7 @@ describe('sizes', () => {
         const res = await fetch(`${baseUrl}/bytes?n=${n}`);
         const body = Buffer.from(await res.arrayBuffer());
         expect(body.length).toBe(n);
-        expect(body.subarray(0, FILLER.length).toString()).toBe(FILLER.slice(0, n));
+        expect(body.every((b) => b === 0x61)).toBe(true);
     });
 
     it('returns n decompressed bytes gzip-encoded', async () => {
@@ -205,7 +189,7 @@ describe('sizes', () => {
 describe('delay and redirect', () => {
     it('responds after the delay', async () => {
         const res = await fetch(`${baseUrl}/delay?ms=10`);
-        expect(await res.json()).toMatchObject({ delayedMs: 10 });
+        expect(await res.json()).toEqual({ delayedMs: 10 });
     });
 
     it('rejects a delay above the maximum', async () => {

@@ -1,25 +1,21 @@
 {
-	"title": "Agent toolbox input",
-	"description": "Same fields as the POST /recommend body. A normal run pushes the recommendation to the default dataset as one item.",
+	"title": "Test Server Actor input",
+	"description": "Same fields as the POST /add body. A normal run pushes { firstNumber, secondNumber, sum } to the default dataset.",
 	"type": "object",
 	"schemaVersion": 1,
 	"properties": {
-		"task": {
-			"title": "Task",
-			"type": "string",
-			"description": "What the agent is trying to do, in plain words. Tools are picked by keywords in this text.",
-			"editor": "textfield",
-			"prefill": "Track competitor prices every day and save them to a CSV"
-		},
-		"maxTools": {
-			"title": "Max tools",
+		"firstNumber": {
+			"title": "First number",
 			"type": "integer",
-			"description": "Maximum number of tools to recommend.",
-			"default": 3,
-			"prefill": 3,
-			"minimum": 1,
-			"maximum": 8
+			"description": "First number to add.",
+			"prefill": 1
+		},
+		"secondNumber": {
+			"title": "Second number",
+			"type": "integer",
+			"description": "Second number to add.",
+			"prefill": 2
 		}
 	},
-	"required": ["task"]
+	"required": ["firstNumber", "secondNumber"]
 }
