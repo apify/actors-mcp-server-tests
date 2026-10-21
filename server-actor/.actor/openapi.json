@@ -43,20 +43,7 @@
 				],
 				"responses": {
 					"200": {
-						"description": "The sum, as JSON or as `text/plain` when `asText=true`.",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/AddResponse"
-								}
-							},
-							"text/plain": {
-								"schema": {
-									"type": "string"
-								},
-								"example": "2 + 3 = 5\n"
-							}
-						}
+						"$ref": "#/components/responses/Add"
 					},
 					"400": {
 						"$ref": "#/components/responses/Error"
@@ -87,20 +74,7 @@
 				},
 				"responses": {
 					"200": {
-						"description": "The sum, as JSON or as `text/plain` when `asText=true`.",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/AddResponse"
-								}
-							},
-							"text/plain": {
-								"schema": {
-									"type": "string"
-								},
-								"example": "2 + 3 = 5\n"
-							}
-						}
+						"$ref": "#/components/responses/Add"
 					},
 					"400": {
 						"$ref": "#/components/responses/Error"
@@ -463,6 +437,22 @@
 						"schema": {
 							"$ref": "#/components/schemas/ErrorResponse"
 						}
+					}
+				}
+			},
+			"Add": {
+				"description": "The sum, as JSON or as `text/plain` when `asText=true`.",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/AddResponse"
+						}
+					},
+					"text/plain": {
+						"schema": {
+							"type": "string"
+						},
+						"example": "2 + 3 = 5\n"
 					}
 				}
 			}

@@ -1,9 +1,11 @@
+import { once } from 'node:events';
 import type { IncomingHttpHeaders } from 'node:http';
 import { get } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { gunzipSync } from 'node:zlib';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { log, LoggerJson } from 'apify';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createApiServer, MAX_BYTES } from '../../src/server.js';
 
@@ -20,6 +22,83 @@ beforeAll(async () => {
 afterAll(async () => {
     await new Promise((resolve) => {
         server.close(resolve);
+    });
+});
+
+describe('request logging', () => {
+    let entries: Record<string, unknown>[];
+    let logger: LoggerJson;
+    let originalOptions: ReturnType<typeof log.getOptions>;
+
+    beforeEach(() => {
+        entries = [];
+        originalOptions = log.getOptions();
+        logger = new LoggerJson();
+        logger.on('line', (line: string) => entries.push(JSON.parse(line)));
+        log.setOptions({ logger, level: log.LEVELS.INFO });
+    });
+
+    afterEach(() => log.setOptions(originalOptions));
+
+    it.each([
+        { path: '/text', method: 'GET', statusCode: 200, isReadinessProbe: false },
+        { path: '/missing', method: 'GET', statusCode: 404, isReadinessProbe: false },
+        { path: '/add', method: 'DELETE', statusCode: 405, isReadinessProbe: false },
+        { path: '//', method: 'GET', statusCode: 400, isReadinessProbe: false },
+        { path: '/', method: 'GET', statusCode: 200, isReadinessProbe: true },
+    ])('logs $method $path with status $statusCode', async ({ path, method, statusCode, isReadinessProbe }) => {
+        const res = await fetch(`${baseUrl}${path}`, {
+            method,
+            headers: isReadinessProbe ? { 'x-apify-container-server-readiness-probe': '1' } : {},
+        });
+        await res.arrayBuffer();
+        expect(res.status).toBe(statusCode);
+        expect(entries).toEqual([
+            expect.objectContaining({
+                msg: 'HTTP request received',
+                requestId: expect.any(String),
+                method,
+                isReadinessProbe,
+            }),
+            expect.objectContaining({ msg: 'HTTP request completed', statusCode, durationMs: expect.any(Number) }),
+        ]);
+        expect(entries[0].path).toBe(path === '//' ? '[invalid URL]' : path);
+        expect(entries[1].requestId).toBe(entries[0].requestId);
+        expect(entries[1].durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('keeps headers, query values and bodies out of logs', async () => {
+        const res = await fetch(`${baseUrl}/?token=query-secret`, {
+            method: 'POST',
+            headers: { authorization: 'Bearer header-secret', cookie: 'session=cookie-secret' },
+            body: 'body-secret',
+        });
+        await res.arrayBuffer();
+        expect(entries).toHaveLength(2);
+        const output = JSON.stringify(entries);
+        for (const secret of ['query-secret', 'header-secret', 'cookie-secret', 'body-secret']) {
+            expect(output).not.toContain(secret);
+        }
+        expect(entries[0]).toMatchObject({ method: 'POST', path: '/' });
+    });
+
+    it('logs arrival before a delayed response and records client disconnects', async () => {
+        const controller = new AbortController();
+        const received = once(logger, 'line');
+        const response = fetch(`${baseUrl}/delay?ms=100`, { signal: controller.signal });
+        await received;
+        expect(entries).toHaveLength(1);
+        expect(entries[0]).toMatchObject({ msg: 'HTTP request received', method: 'GET', path: '/delay' });
+        const closed = once(logger, 'line');
+        controller.abort();
+        await expect(response).rejects.toThrow();
+        await closed;
+        expect(entries[1]).toMatchObject({
+            msg: 'HTTP request aborted',
+            requestId: entries[0].requestId,
+            durationMs: expect.any(Number),
+        });
+        expect(entries[1]).not.toHaveProperty('statusCode');
     });
 });
 
@@ -205,6 +284,15 @@ describe('delay and redirect', () => {
 });
 
 describe('unknown paths', () => {
+    it('returns 400 for an invalid request URL and stays available', async () => {
+        const res = await fetch(`${baseUrl}//`, { signal: AbortSignal.timeout(1000) });
+        expect(res.status).toBe(400);
+        expect(await res.json()).toMatchObject({ code: 400 });
+
+        const next = await fetch(`${baseUrl}/`);
+        expect(next.status).toBe(200);
+    });
+
     it('returns 404 with a JSON error body', async () => {
         const res = await fetch(`${baseUrl}/missing`);
         expect(res.status).toBe(404);

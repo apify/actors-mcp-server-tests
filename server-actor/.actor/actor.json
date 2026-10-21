@@ -9,7 +9,7 @@
 	"usesStandbyMode": true,
 	"meta": {
 		"templateId": "ts-standby",
-		"generatedBy": "Claude Code"
+		"generatedBy": "Codex with GPT-6"
 	},
 	"dockerfile": "../Dockerfile",
 	"inputSchema": "./input_schema.json",
