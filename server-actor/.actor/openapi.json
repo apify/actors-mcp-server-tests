@@ -1,0 +1,461 @@
+{
+	"openapi": "3.0.0",
+	"info": {
+		"title": "Apify MCP server test Server Actor API",
+		"description": "Test API for the Apify MCP server. Not for production use. Adds two numbers, and has test endpoints that echo requests and return fixed status codes, content types, sizes, delays and a redirect.",
+		"version": "0.0"
+	},
+	"servers": [
+		{
+			"url": "https://example-server-actor.apify.actor",
+			"description": "Test Server Actor URL"
+		}
+	],
+	"paths": {
+		"/add": {
+			"get": {
+				"summary": "Add two numbers (query)",
+				"description": "Adds `firstNumber` and `secondNumber` from the query. Returns the same item a normal run pushes to its dataset.",
+				"parameters": [
+					{
+						"name": "firstNumber",
+						"in": "query",
+						"required": true,
+						"description": "First number to add.",
+						"schema": {
+							"type": "integer"
+						},
+						"example": 2
+					},
+					{
+						"name": "secondNumber",
+						"in": "query",
+						"required": true,
+						"description": "Second number to add.",
+						"schema": {
+							"type": "integer"
+						},
+						"example": 3
+					},
+					{
+						"$ref": "#/components/parameters/AsText"
+					}
+				],
+				"responses": {
+					"200": {
+						"$ref": "#/components/responses/Add"
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			},
+			"post": {
+				"summary": "Add two numbers (JSON body)",
+				"description": "Adds `firstNumber` and `secondNumber` from the JSON body. Returns the same item a normal run pushes to its dataset.",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/AsText"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AddRequest"
+							},
+							"example": {
+								"firstNumber": 2,
+								"secondNumber": 3
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"$ref": "#/components/responses/Add"
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			}
+		},
+		"/": {
+			"get": {
+				"summary": "Echo a GET request",
+				"description": "Returns the method, path, query, headers and body of the request as JSON. Also answers the readiness probe when the `x-apify-container-server-readiness-probe` header is set.",
+				"responses": {
+					"200": {
+						"$ref": "#/components/responses/Echo"
+					}
+				}
+			},
+			"post": {
+				"summary": "Echo a POST request",
+				"description": "Returns the method, path, query, headers and body of the request as JSON. A JSON body is parsed; other bodies are returned as text.",
+				"requestBody": {
+					"required": false,
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "Any JSON value."
+							},
+							"example": {
+								"hello": "world"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"$ref": "#/components/responses/Echo"
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			}
+		},
+		"/status/{code}": {
+			"get": {
+				"summary": "Return an error status",
+				"description": "Returns the given status code with a JSON error body.",
+				"parameters": [
+					{
+						"name": "code",
+						"in": "path",
+						"required": true,
+						"description": "HTTP status code to return, from 400 to 599.",
+						"schema": {
+							"type": "integer",
+							"minimum": 400,
+							"maximum": 599
+						},
+						"example": 404
+					}
+				],
+				"responses": {
+					"default": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			}
+		},
+		"/empty": {
+			"get": {
+				"summary": "Return no content",
+				"description": "Returns 204 with no body and no Content-Type.",
+				"responses": {
+					"204": {
+						"description": "No content."
+					}
+				}
+			}
+		},
+		"/text": {
+			"get": {
+				"summary": "Return plain text",
+				"description": "Returns a short `text/plain` body.",
+				"responses": {
+					"200": {
+						"description": "Plain text.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/binary": {
+			"get": {
+				"summary": "Return binary data",
+				"description": "Returns 256 bytes as `application/octet-stream`.",
+				"responses": {
+					"200": {
+						"description": "Binary data.",
+						"content": {
+							"application/octet-stream": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/bytes": {
+			"get": {
+				"summary": "Return n bytes",
+				"description": "Returns a `text/plain` body of exactly `n` bytes.",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/ByteCount"
+					}
+				],
+				"responses": {
+					"200": {
+						"$ref": "#/components/responses/Bytes"
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			}
+		},
+		"/gzip": {
+			"get": {
+				"summary": "Return n bytes gzip-encoded",
+				"description": "Returns the same body as `/bytes` with `Content-Encoding: gzip`. `n` counts decompressed bytes.",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/ByteCount"
+					}
+				],
+				"responses": {
+					"200": {
+						"$ref": "#/components/responses/Bytes"
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			}
+		},
+		"/delay": {
+			"get": {
+				"summary": "Respond after a delay",
+				"description": "Waits `ms` milliseconds, then returns JSON.",
+				"parameters": [
+					{
+						"name": "ms",
+						"in": "query",
+						"required": true,
+						"description": "Delay in milliseconds, from 0 to 150000.",
+						"schema": {
+							"type": "integer",
+							"minimum": 0,
+							"maximum": 150000
+						},
+						"example": 1000
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Delay finished.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"delayedMs": {
+											"type": "integer"
+										}
+									},
+									"required": [
+										"delayedMs"
+									]
+								}
+							}
+						}
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			}
+		},
+		"/redirect": {
+			"get": {
+				"summary": "Redirect to /",
+				"description": "Returns 302 with `Location: /`.",
+				"responses": {
+					"302": {
+						"description": "Redirect.",
+						"headers": {
+							"Location": {
+								"description": "Always `/`.",
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"AddRequest": {
+				"type": "object",
+				"description": "Same fields as the Actor input schema.",
+				"properties": {
+					"firstNumber": {
+						"type": "integer",
+						"description": "First number to add."
+					},
+					"secondNumber": {
+						"type": "integer",
+						"description": "Second number to add."
+					}
+				},
+				"required": [
+					"firstNumber",
+					"secondNumber"
+				]
+			},
+			"AddResponse": {
+				"type": "object",
+				"properties": {
+					"firstNumber": {
+						"type": "integer",
+						"example": 2
+					},
+					"secondNumber": {
+						"type": "integer",
+						"example": 3
+					},
+					"sum": {
+						"type": "integer",
+						"example": 5
+					}
+				},
+				"required": [
+					"firstNumber",
+					"secondNumber",
+					"sum"
+				]
+			},
+			"EchoResponse": {
+				"type": "object",
+				"properties": {
+					"method": {
+						"type": "string",
+						"example": "POST"
+					},
+					"path": {
+						"type": "string",
+						"example": "/"
+					},
+					"query": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": true
+					},
+					"body": {
+						"description": "Parsed JSON body, raw text body, or null when empty."
+					}
+				},
+				"required": [
+					"method",
+					"path",
+					"query",
+					"headers",
+					"body"
+				]
+			},
+			"ErrorResponse": {
+				"type": "object",
+				"properties": {
+					"code": {
+						"type": "integer",
+						"example": 404
+					},
+					"error": {
+						"type": "string",
+						"example": "Not Found"
+					}
+				},
+				"required": [
+					"code",
+					"error"
+				]
+			}
+		},
+		"parameters": {
+			"AsText": {
+				"name": "asText",
+				"in": "query",
+				"required": false,
+				"description": "`true` returns the sum as `text/plain`, `false` (default) as JSON. Other values, including `1` and `0`, return 400.",
+				"schema": {
+					"type": "boolean",
+					"default": false
+				}
+			},
+			"ByteCount": {
+				"name": "n",
+				"in": "query",
+				"required": true,
+				"description": "Body size in bytes, from 0 to 1048576.",
+				"schema": {
+					"type": "integer",
+					"minimum": 0,
+					"maximum": 1048576
+				},
+				"example": 262144
+			}
+		},
+		"responses": {
+			"Echo": {
+				"description": "The request as JSON.",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/EchoResponse"
+						}
+					}
+				}
+			},
+			"Bytes": {
+				"description": "Exactly `n` bytes of `a`.",
+				"content": {
+					"text/plain": {
+						"schema": {
+							"type": "string"
+						}
+					}
+				}
+			},
+			"Error": {
+				"description": "Error.",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/ErrorResponse"
+						}
+					}
+				}
+			},
+			"Add": {
+				"description": "The sum, as JSON or as `text/plain` when `asText=true`.",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/AddResponse"
+						}
+					},
+					"text/plain": {
+						"schema": {
+							"type": "string"
+						},
+						"example": "2 + 3 = 5\n"
+					}
+				}
+			}
+		}
+	}
+}

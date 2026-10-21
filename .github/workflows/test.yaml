@@ -10,7 +10,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                actor: [mcp-server-actor, normal-actor]
+                actor: [mcp-server-actor, normal-actor, server-actor]
         defaults:
             run:
                 working-directory: ${{ matrix.actor }}

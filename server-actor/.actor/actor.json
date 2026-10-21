@@ -1,0 +1,23 @@
+{
+	"$schema": "https://apify.com/schemas/v1/actor.ide.json",
+	"actorSpecification": 1,
+	"name": "example-server-actor",
+	"title": "Apify MCP server test Server Actor",
+	"description": "Test Actor for the Apify MCP server. Not for production use. Adds two numbers over an HTTP API documented by an OpenAPI schema (Standby) or as a normal run, and has HTTP test endpoints.",
+	"version": "0.0",
+	"buildTag": "latest",
+	"usesStandbyMode": true,
+	"meta": {
+		"templateId": "ts-standby",
+		"generatedBy": "Codex with GPT-6"
+	},
+	"dockerfile": "../Dockerfile",
+	"inputSchema": "./input_schema.json",
+	"output": "./output_schema.json",
+	"storages": {
+		"datasets": {
+			"default": "./dataset_schema.json"
+		}
+	},
+	"webServerSchema": "./openapi.json"
+}

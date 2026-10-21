@@ -1,0 +1,13 @@
+{
+    "actorOutputSchemaVersion": 1,
+    "title": "Test Server Actor output",
+    "description": "Normal runs store the addition result in the default dataset. Standby requests return HTTP responses directly.",
+    "properties": {
+        "results": {
+            "type": "string",
+            "title": "Addition results",
+            "description": "One dataset item containing firstNumber, secondNumber, and sum.",
+            "template": "{{links.apiDefaultDatasetUrl}}/items"
+        }
+    }
+}

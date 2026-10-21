@@ -1,0 +1,21 @@
+{
+	"title": "Test Server Actor input",
+	"description": "Same fields as the POST /add body. A normal run pushes { firstNumber, secondNumber, sum } to the default dataset.",
+	"type": "object",
+	"schemaVersion": 1,
+	"properties": {
+		"firstNumber": {
+			"title": "First number",
+			"type": "integer",
+			"description": "First number to add.",
+			"prefill": 1
+		},
+		"secondNumber": {
+			"title": "Second number",
+			"type": "integer",
+			"description": "Second number to add.",
+			"prefill": 2
+		}
+	},
+	"required": ["firstNumber", "secondNumber"]
+}
