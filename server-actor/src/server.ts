@@ -3,10 +3,15 @@ import { createServer, STATUS_CODES } from 'node:http';
 import { setTimeout } from 'node:timers/promises';
 import { gzipSync } from 'node:zlib';
 
+import { inputSchema } from './input-schema.js';
+import { findTool, listTools, MOTTO, recommend } from './toolbox.js';
+
 export const MAX_BYTES = 1024 * 1024;
 export const MAX_DELAY_MS = 150_000;
 // Fixed same-host target. Never taken from the request.
 export const REDIRECT_LOCATION = '/';
+// Filler for /bytes and /gzip, repeated and cut to exactly n bytes.
+export const FILLER = 'Agents need proper tools. ';
 
 const READINESS_PROBE_HEADER = 'x-apify-container-server-readiness-probe';
 
@@ -67,6 +72,35 @@ const echo: Route = async (req, res, url) => {
     });
 };
 
+const tools: Route = (_req, res) => {
+    sendJson(res, 200, { motto: MOTTO, tools: listTools() });
+};
+
+const tool: Route = (_req, res, url) => {
+    const id = decodeURIComponent(url.pathname.slice('/tools/'.length));
+    const found = findTool(id);
+    if (!found) {
+        sendError(res, 404, `No tool with id '${id}' in the toolbox`);
+        return;
+    }
+    sendJson(res, 200, found);
+};
+
+const recommendRoute: Route = async (req, res) => {
+    let parsed;
+    try {
+        parsed = inputSchema.safeParse(JSON.parse(await readBody(req)));
+    } catch {
+        sendError(res, 400, 'Request body is not valid JSON');
+        return;
+    }
+    if (!parsed.success) {
+        sendError(res, 400, parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
+        return;
+    }
+    sendJson(res, 200, recommend(parsed.data));
+};
+
 const status: Route = (_req, res, url) => {
     const code = Number(url.pathname.slice('/status/'.length));
     if (!Number.isInteger(code) || code < 400 || code > 599) {
@@ -83,7 +117,12 @@ const empty: Route = (_req, res) => {
 
 const text: Route = (_req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Plain text response from example-server-actor.\n');
+    res.end(
+        `${MOTTO}\n` +
+            'A model can reason. Without tools it cannot read today, keep a result, or come back tomorrow.\n' +
+            'Give it a browser, a scraper, storage, a schedule, and a schema that says what exists.\n' +
+            'See you at Apify Run.\n',
+    );
 };
 
 const binary: Route = (_req, res) => {
@@ -97,7 +136,7 @@ function bytesBody(url: URL, res: ServerResponse): Buffer | null {
         sendError(res, 400, `Query parameter n must be an integer from 0 to ${MAX_BYTES}`);
         return null;
     }
-    return Buffer.alloc(n, 'a');
+    return Buffer.alloc(n, FILLER);
 }
 
 const bytes: Route = (_req, res, url) => {
@@ -121,7 +160,7 @@ const delay: Route = async (_req, res, url) => {
         return;
     }
     await setTimeout(ms);
-    sendJson(res, 200, { delayedMs: ms });
+    sendJson(res, 200, { delayedMs: ms, note: 'A slow tool is still a tool. A hung one is not.' });
 };
 
 const redirect: Route = (_req, res) => {
@@ -130,6 +169,7 @@ const redirect: Route = (_req, res) => {
 };
 
 const GET_ROUTES: Record<string, Route> = {
+    '/tools': tools,
     '/empty': empty,
     '/text': text,
     '/binary': binary,
@@ -141,8 +181,10 @@ const GET_ROUTES: Record<string, Route> = {
 
 function findRoute(method: string | undefined, pathname: string): Route | null {
     if (pathname === '/') return echo;
+    if (pathname === '/recommend') return method === 'POST' ? recommendRoute : null;
     if (method !== 'GET') return null;
     if (pathname.startsWith('/status/')) return status;
+    if (pathname.startsWith('/tools/')) return tool;
     return GET_ROUTES[pathname] ?? null;
 }
 

@@ -1,14 +1,14 @@
 {
 	"openapi": "3.0.0",
 	"info": {
-		"title": "Example Server Actor API",
-		"description": "Test API for the Apify MCP server. Echoes requests and returns fixed status codes, content types, sizes, delays and redirects.",
+		"title": "Agent Toolbox API",
+		"description": "An agent is only as good as its tools. Browse the toolbox, get tools recommended for a task, or use the test endpoints that echo requests and return fixed status codes, content types, sizes, delays and a redirect.",
 		"version": "0.0"
 	},
 	"servers": [
 		{
 			"url": "https://example-server-actor.apify.actor",
-			"description": "Example Server Actor server URL"
+			"description": "Agent Toolbox server URL"
 		}
 	],
 	"paths": {
@@ -17,7 +17,9 @@
 				"summary": "Echo a GET request",
 				"description": "Returns the method, path, query, headers and body of the request as JSON. Also answers the readiness probe when the `x-apify-container-server-readiness-probe` header is set.",
 				"responses": {
-					"200": { "$ref": "#/components/responses/Echo" }
+					"200": {
+						"$ref": "#/components/responses/Echo"
+					}
 				}
 			},
 			"post": {
@@ -27,14 +29,124 @@
 					"required": true,
 					"content": {
 						"application/json": {
-							"schema": { "$ref": "#/components/schemas/EchoRequest" },
-							"example": { "message": "hello", "count": 1 }
+							"schema": {
+								"$ref": "#/components/schemas/TaskRequest"
+							},
+							"example": {
+								"task": "Track competitor prices every day",
+								"maxTools": 3
+							}
 						}
 					}
 				},
 				"responses": {
-					"200": { "$ref": "#/components/responses/Echo" },
-					"400": { "$ref": "#/components/responses/Error" }
+					"200": {
+						"$ref": "#/components/responses/Echo"
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			}
+		},
+		"/tools": {
+			"get": {
+				"summary": "List the toolbox",
+				"description": "Returns every tool an agent should have, what it does, and what goes wrong without it.",
+				"responses": {
+					"200": {
+						"description": "The toolbox.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"motto": {
+											"type": "string"
+										},
+										"tools": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Tool"
+											}
+										}
+									},
+									"required": [
+										"motto",
+										"tools"
+									]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/tools/{toolId}": {
+			"get": {
+				"summary": "Get one tool",
+				"description": "Returns one tool from the toolbox.",
+				"parameters": [
+					{
+						"name": "toolId",
+						"in": "path",
+						"required": true,
+						"description": "Tool ID from `GET /tools`.",
+						"schema": {
+							"type": "string"
+						},
+						"example": "scraper"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The tool.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Tool"
+								}
+							}
+						}
+					},
+					"404": {
+						"$ref": "#/components/responses/Error"
+					}
+				}
+			}
+		},
+		"/recommend": {
+			"post": {
+				"summary": "Recommend tools for a task",
+				"description": "Picks up to `maxTools` tools whose keywords appear in the task, most matches first. Returns the same item a normal run of the Actor pushes to its dataset.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TaskRequest"
+							},
+							"example": {
+								"task": "Track competitor prices every day and save them to a CSV",
+								"maxTools": 3
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Recommended tools.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Recommendation"
+								}
+							}
+						}
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
 				}
 			}
 		},
@@ -48,12 +160,18 @@
 						"in": "path",
 						"required": true,
 						"description": "HTTP status code to return, from 400 to 599.",
-						"schema": { "type": "integer", "minimum": 400, "maximum": 599 },
+						"schema": {
+							"type": "integer",
+							"minimum": 400,
+							"maximum": 599
+						},
 						"example": 404
 					}
 				],
 				"responses": {
-					"default": { "$ref": "#/components/responses/Error" }
+					"default": {
+						"$ref": "#/components/responses/Error"
+					}
 				}
 			}
 		},
@@ -62,18 +180,26 @@
 				"summary": "Return no content",
 				"description": "Returns 204 with no body and no Content-Type.",
 				"responses": {
-					"204": { "description": "No content." }
+					"204": {
+						"description": "No content."
+					}
 				}
 			}
 		},
 		"/text": {
 			"get": {
 				"summary": "Return plain text",
-				"description": "Returns a short `text/plain` body.",
+				"description": "Returns a short `text/plain` note on why agents need tools.",
 				"responses": {
 					"200": {
 						"description": "Plain text.",
-						"content": { "text/plain": { "schema": { "type": "string" } } }
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
 					}
 				}
 			}
@@ -86,7 +212,12 @@
 					"200": {
 						"description": "Binary data.",
 						"content": {
-							"application/octet-stream": { "schema": { "type": "string", "format": "binary" } }
+							"application/octet-stream": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
 						}
 					}
 				}
@@ -95,11 +226,19 @@
 		"/bytes": {
 			"get": {
 				"summary": "Return n bytes",
-				"description": "Returns a `text/plain` body of exactly `n` bytes.",
-				"parameters": [{ "$ref": "#/components/parameters/ByteCount" }],
+				"description": "Returns a `text/plain` body of exactly `n` bytes: \"Agents need proper tools. \" repeated and cut to length.",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/ByteCount"
+					}
+				],
 				"responses": {
-					"200": { "$ref": "#/components/responses/Bytes" },
-					"400": { "$ref": "#/components/responses/Error" }
+					"200": {
+						"$ref": "#/components/responses/Bytes"
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
 				}
 			}
 		},
@@ -107,10 +246,18 @@
 			"get": {
 				"summary": "Return n bytes gzip-encoded",
 				"description": "Returns the same body as `/bytes` with `Content-Encoding: gzip`. `n` counts decompressed bytes.",
-				"parameters": [{ "$ref": "#/components/parameters/ByteCount" }],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/ByteCount"
+					}
+				],
 				"responses": {
-					"200": { "$ref": "#/components/responses/Bytes" },
-					"400": { "$ref": "#/components/responses/Error" }
+					"200": {
+						"$ref": "#/components/responses/Bytes"
+					},
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
 				}
 			}
 		},
@@ -124,7 +271,11 @@
 						"in": "query",
 						"required": true,
 						"description": "Delay in milliseconds, from 0 to 150000.",
-						"schema": { "type": "integer", "minimum": 0, "maximum": 150000 },
+						"schema": {
+							"type": "integer",
+							"minimum": 0,
+							"maximum": 150000
+						},
 						"example": 1000
 					}
 				],
@@ -135,13 +286,25 @@
 							"application/json": {
 								"schema": {
 									"type": "object",
-									"properties": { "delayedMs": { "type": "integer" } },
-									"required": ["delayedMs"]
+									"properties": {
+										"delayedMs": {
+											"type": "integer"
+										},
+										"note": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"delayedMs",
+										"note"
+									]
 								}
 							}
 						}
 					},
-					"400": { "$ref": "#/components/responses/Error" }
+					"400": {
+						"$ref": "#/components/responses/Error"
+					}
 				}
 			}
 		},
@@ -153,7 +316,12 @@
 					"302": {
 						"description": "Redirect.",
 						"headers": {
-							"Location": { "description": "Always `/`.", "schema": { "type": "string" } }
+							"Location": {
+								"description": "Always `/`.",
+								"schema": {
+									"type": "string"
+								}
+							}
 						}
 					}
 				}
@@ -162,33 +330,148 @@
 	},
 	"components": {
 		"schemas": {
-			"EchoRequest": {
+			"TaskRequest": {
 				"type": "object",
 				"description": "Same fields as the Actor input schema.",
 				"properties": {
-					"message": { "type": "string", "description": "Text to echo." },
-					"count": { "type": "integer", "minimum": 0, "default": 1, "description": "Number to echo." }
+					"task": {
+						"type": "string",
+						"minLength": 1,
+						"description": "What the agent is trying to do, in plain words."
+					},
+					"maxTools": {
+						"type": "integer",
+						"minimum": 1,
+						"maximum": 8,
+						"default": 3,
+						"description": "Maximum number of tools to recommend."
+					}
 				},
-				"required": ["message"]
+				"required": [
+					"task"
+				]
+			},
+			"Tool": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"example": "scraper"
+					},
+					"name": {
+						"type": "string",
+						"example": "Scraper"
+					},
+					"job": {
+						"type": "string",
+						"example": "Turns a website into rows."
+					},
+					"withoutIt": {
+						"type": "string",
+						"example": "The agent copies tables by hand, one hallucinated cell at a time."
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"job",
+					"withoutIt"
+				]
+			},
+			"Recommendation": {
+				"type": "object",
+				"properties": {
+					"task": {
+						"type": "string"
+					},
+					"maxTools": {
+						"type": "integer"
+					},
+					"tools": {
+						"type": "array",
+						"items": {
+							"allOf": [
+								{
+									"$ref": "#/components/schemas/Tool"
+								},
+								{
+									"type": "object",
+									"properties": {
+										"matched": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											},
+											"description": "Keywords found in the task. Empty when nothing matched and the schemas are returned as a starting point."
+										}
+									},
+									"required": [
+										"matched"
+									]
+								}
+							]
+						}
+					},
+					"motto": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"task",
+					"maxTools",
+					"tools",
+					"motto"
+				]
 			},
 			"EchoResponse": {
 				"type": "object",
 				"properties": {
-					"method": { "type": "string", "example": "POST" },
-					"path": { "type": "string", "example": "/" },
-					"query": { "type": "object", "additionalProperties": { "type": "string" } },
-					"headers": { "type": "object", "additionalProperties": true },
-					"body": { "description": "Parsed JSON body, raw text body, or null when empty." }
+					"method": {
+						"type": "string",
+						"example": "POST"
+					},
+					"path": {
+						"type": "string",
+						"example": "/"
+					},
+					"query": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": true
+					},
+					"body": {
+						"description": "Parsed JSON body, raw text body, or null when empty."
+					}
 				},
-				"required": ["method", "path", "query", "headers", "body"]
+				"required": [
+					"method",
+					"path",
+					"query",
+					"headers",
+					"body"
+				]
 			},
 			"ErrorResponse": {
 				"type": "object",
 				"properties": {
-					"code": { "type": "integer", "example": 404 },
-					"error": { "type": "string", "example": "Not Found" }
+					"code": {
+						"type": "integer",
+						"example": 404
+					},
+					"error": {
+						"type": "string",
+						"example": "Not Found"
+					}
 				},
-				"required": ["code", "error"]
+				"required": [
+					"code",
+					"error"
+				]
 			}
 		},
 		"parameters": {
@@ -197,22 +480,44 @@
 				"in": "query",
 				"required": true,
 				"description": "Body size in bytes, from 0 to 1048576.",
-				"schema": { "type": "integer", "minimum": 0, "maximum": 1048576 },
+				"schema": {
+					"type": "integer",
+					"minimum": 0,
+					"maximum": 1048576
+				},
 				"example": 262144
 			}
 		},
 		"responses": {
 			"Echo": {
 				"description": "The request as JSON.",
-				"content": { "application/json": { "schema": { "$ref": "#/components/schemas/EchoResponse" } } }
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/EchoResponse"
+						}
+					}
+				}
 			},
 			"Bytes": {
-				"description": "Exactly `n` bytes of `a`.",
-				"content": { "text/plain": { "schema": { "type": "string" } } }
+				"description": "Exactly `n` bytes of \"Agents need proper tools. \" repeated.",
+				"content": {
+					"text/plain": {
+						"schema": {
+							"type": "string"
+						}
+					}
+				}
 			},
 			"Error": {
 				"description": "Error.",
-				"content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/ErrorResponse"
+						}
+					}
+				}
 			}
 		}
 	}

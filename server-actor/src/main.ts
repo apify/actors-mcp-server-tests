@@ -4,6 +4,7 @@ import { Actor, log } from 'apify';
 
 import { inputSchema } from './input-schema.js';
 import { createApiServer } from './server.js';
+import { recommend } from './toolbox.js';
 
 await Actor.init();
 
@@ -17,13 +18,13 @@ if (Actor.config.get('metaOrigin') === 'STANDBY') {
     const port = Actor.config.get('standbyPort');
     createApiServer().listen(port, () => log.info(`Server listening on port ${port}`));
 } else {
-    // Input interface: push the input as one dataset item and exit.
+    // Input interface: push the same recommendation as POST /recommend as one dataset item and exit.
     const parsed = inputSchema.safeParse((await Actor.getInput()) ?? {});
     if (!parsed.success) {
         log.error('Invalid Actor input', { error: parsed.error.message });
         await Actor.fail('Invalid Actor input');
     } else {
-        await Actor.pushData(parsed.data);
+        await Actor.pushData(recommend(parsed.data));
         await Actor.exit();
     }
 }

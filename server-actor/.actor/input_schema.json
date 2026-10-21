@@ -1,24 +1,25 @@
 {
-	"title": "Example Server Actor input",
-	"description": "Same fields as the POST / request body. A normal run pushes the input to the default dataset as one item.",
+	"title": "Agent toolbox input",
+	"description": "Same fields as the POST /recommend body. A normal run pushes the recommendation to the default dataset as one item.",
 	"type": "object",
 	"schemaVersion": 1,
 	"properties": {
-		"message": {
-			"title": "Message",
+		"task": {
+			"title": "Task",
 			"type": "string",
-			"description": "Text to echo.",
+			"description": "What the agent is trying to do, in plain words. Tools are picked by keywords in this text.",
 			"editor": "textfield",
-			"prefill": "hello"
+			"prefill": "Track competitor prices every day and save them to a CSV"
 		},
-		"count": {
-			"title": "Count",
+		"maxTools": {
+			"title": "Max tools",
 			"type": "integer",
-			"description": "Number to echo.",
-			"default": 1,
-			"prefill": 1,
-			"minimum": 0
+			"description": "Maximum number of tools to recommend.",
+			"default": 3,
+			"prefill": 3,
+			"minimum": 1,
+			"maximum": 8
 		}
 	},
-	"required": ["message"]
+	"required": ["task"]
 }
