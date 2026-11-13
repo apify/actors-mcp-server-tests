@@ -8,7 +8,7 @@ import { runNormal } from './run-actor.js';
  * that got no response held the run until the platform timed it out (about 1 run in 800, seen in the integration
  * tests of apify-mcp-server). With a short timeout the client drops such a request and retries it.
  */
-const API_REQUEST_TIMEOUT_SECS = 30;
+const API_REQUEST_TIMEOUT_SECS = 10;
 
 // Must come before the first `Actor` call: the SDK builds its API client from this option on first use.
 Configuration.getGlobalConfig().set('storageClientOptions', { timeoutSecs: API_REQUEST_TIMEOUT_SECS });
