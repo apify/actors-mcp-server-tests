@@ -9,7 +9,7 @@
 	"usesStandbyMode": false,
 	"meta": {
 		"templateId": "ts-mcp-empty",
-		"generatedBy": "Claude Code with Claude Opus 4.7 (1M context)"
+		"generatedBy": "Claude Code with Claude Mythos 5.2"
 	},
 	"input": {
 		"title": "Actor input schema",

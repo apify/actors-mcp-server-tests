@@ -97,25 +97,34 @@ export async function runNormal({ firstNumber, secondNumber, waitSeconds, maxBoo
     const sum = firstNumber + secondNumber;
     log.info('Computed sum', { firstNumber, secondNumber, sum });
 
+    // The API calls below run one after another and each logs when it is done, so the timestamps in the log of a
+    // slow or stuck run show which call it was in.
     const operations = computeOperations(firstNumber, secondNumber);
     await Actor.pushData({ firstNumber, secondNumber, sum, ...operations });
+    log.info('Pushed sum item');
 
     const books = APIFY_BOOK_FIXTURE.slice(0, maxBooks);
     log.info('Pushing Apify book fixture', { count: books.length });
     const booksDataset = await Actor.openDataset({ alias: 'books' });
+    log.info('Opened books dataset');
     await booksDataset.pushData(books);
+    log.info('Pushed books');
 
     const totalRating = books.reduce((acc, b) => acc + b.rating, 0);
     await Actor.setValue('RESULT', { sum });
+    log.info('Stored RESULT');
     await Actor.setValue('STATS', {
         bookCount: books.length,
         totalRating,
         averageRating: books.length === 0 ? null : totalRating / books.length,
     });
+    log.info('Stored STATS');
     await Actor.setValue('LOG', `Scrape finished. ${books.length} book(s) pushed.`, {
         contentType: 'text/plain',
     });
+    log.info('Stored LOG');
     await Actor.setValue('COVER', COVER_PNG_BUFFER, { contentType: 'image/png' });
+    log.info('Stored COVER');
 
     await Actor.exit('Successfully completed');
 }
