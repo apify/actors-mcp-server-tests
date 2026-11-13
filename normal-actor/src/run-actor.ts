@@ -86,19 +86,8 @@ const COVER_PNG_BUFFER = Buffer.from(
     'base64',
 );
 
-/**
- * Runs one Apify API call and logs how long it took. The calls run one after another, so the last line in the log
- * of a stuck run names the call before the stuck one, and a retried call shows as a long duration.
- */
-export async function logged<T>(step: string, call: () => Promise<T>): Promise<T> {
-    const startedAt = Date.now();
-    const result = await call();
-    log.info(step, { durationMillis: Date.now() - startedAt });
-    return result;
-}
-
 export async function runNormal({ firstNumber, secondNumber, waitSeconds, maxBooks }: Input): Promise<void> {
-    await logged('Set status message', async () => Actor.setStatusMessage('Processing'));
+    await Actor.setStatusMessage('Processing');
 
     if (waitSeconds > 0) {
         log.info(`Waiting ${waitSeconds}s before computing sum`);
@@ -108,29 +97,34 @@ export async function runNormal({ firstNumber, secondNumber, waitSeconds, maxBoo
     const sum = firstNumber + secondNumber;
     log.info('Computed sum', { firstNumber, secondNumber, sum });
 
+    // The API calls below run one after another and each logs when it is done, so the timestamps in the log of a
+    // slow or stuck run show which call it was in.
     const operations = computeOperations(firstNumber, secondNumber);
-    await logged('Pushed sum item', async () => Actor.pushData({ firstNumber, secondNumber, sum, ...operations }));
+    await Actor.pushData({ firstNumber, secondNumber, sum, ...operations });
+    log.info('Pushed sum item');
 
     const books = APIFY_BOOK_FIXTURE.slice(0, maxBooks);
     log.info('Pushing Apify book fixture', { count: books.length });
-    const booksDataset = await logged('Opened books dataset', async () => Actor.openDataset({ alias: 'books' }));
-    await logged('Pushed books', async () => booksDataset.pushData(books));
+    const booksDataset = await Actor.openDataset({ alias: 'books' });
+    log.info('Opened books dataset');
+    await booksDataset.pushData(books);
+    log.info('Pushed books');
 
     const totalRating = books.reduce((acc, b) => acc + b.rating, 0);
-    await logged('Stored RESULT', async () => Actor.setValue('RESULT', { sum }));
-    await logged('Stored STATS', async () =>
-        Actor.setValue('STATS', {
-            bookCount: books.length,
-            totalRating,
-            averageRating: books.length === 0 ? null : totalRating / books.length,
-        }),
-    );
-    await logged('Stored LOG', async () =>
-        Actor.setValue('LOG', `Scrape finished. ${books.length} book(s) pushed.`, {
-            contentType: 'text/plain',
-        }),
-    );
-    await logged('Stored COVER', async () => Actor.setValue('COVER', COVER_PNG_BUFFER, { contentType: 'image/png' }));
+    await Actor.setValue('RESULT', { sum });
+    log.info('Stored RESULT');
+    await Actor.setValue('STATS', {
+        bookCount: books.length,
+        totalRating,
+        averageRating: books.length === 0 ? null : totalRating / books.length,
+    });
+    log.info('Stored STATS');
+    await Actor.setValue('LOG', `Scrape finished. ${books.length} book(s) pushed.`, {
+        contentType: 'text/plain',
+    });
+    log.info('Stored LOG');
+    await Actor.setValue('COVER', COVER_PNG_BUFFER, { contentType: 'image/png' });
+    log.info('Stored COVER');
 
     await Actor.exit('Successfully completed');
 }

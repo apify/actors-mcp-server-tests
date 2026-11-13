@@ -1,7 +1,7 @@
 import { Actor, Configuration, log } from 'apify';
 
 import { inputSchema } from './input-schema.js';
-import { logged, runNormal } from './run-actor.js';
+import { runNormal } from './run-actor.js';
 
 /**
  * Timeout of one Apify API request. The client's default is 360 s, longer than the run's own timeout, so a request
@@ -17,7 +17,8 @@ Configuration.getGlobalConfig().set('storageClientOptions', { timeoutSecs: API_R
 // This call configures the Actor for its environment and should be called at startup
 await Actor.init();
 
-const rawInput = await logged('Read input', async () => Actor.getInput());
+const rawInput = await Actor.getInput();
+log.info('Read input');
 let input;
 try {
     input = inputSchema.parse(rawInput ?? {});
